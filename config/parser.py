@@ -2,7 +2,8 @@
 Configuration for data parsing pipeline.
 
 This module contains the configuration dictionary that defines how each column
-in the Head Hunter dataset should be processed and transformed.
+in the Head Hunter dataset should be processed and transformed. The keys in the
+config must match the raw CSV column names (including typos and punctuation).
 """
 
 from parsers import (

@@ -36,13 +36,8 @@ class WorkPositionCategorizer(BaseCategoricalTextExtractor):
             r"программист|разработчик|developer|software engineer|full[-\s]?stack|frontend|backend|HTML|Java|Python",
             re.IGNORECASE,
         ),
-        "qa": re.compile(
-            r"test|тестировщик|QA|quality assurance|automation|devops",
-            re.IGNORECASE,
-        ),
-        "sysadmin": re.compile(
-            r"админ|administrator|network engineer", re.IGNORECASE
-        ),
+        "qa": re.compile(r"test|тестировщик|QA|quality assurance|automation|devops", re.IGNORECASE),
+        "sysadmin": re.compile(r"админ|administrator|network engineer", re.IGNORECASE),
         "engineer": re.compile(
             r"инженер|engineering|технический специалист|техник|engineer|technical specialist",
             re.IGNORECASE,
@@ -55,19 +50,13 @@ class WorkPositionCategorizer(BaseCategoricalTextExtractor):
             r"менеджер|manager|руководитель|начальник|директор|управляющий|владелец|lead|head|coordinator|director|CEO|CTO|executive|product owner",
             re.IGNORECASE,
         ),
-        "analyst": re.compile(
-            r"аналитик|analyst|data scientist|данные", re.IGNORECASE
-        ),
-        "designer": re.compile(
-            r"дизайн|web|designer|UX|UI|2d|3d|graphic", re.IGNORECASE
-        ),
+        "analyst": re.compile(r"аналитик|analyst|data scientist|данные", re.IGNORECASE),
+        "designer": re.compile(r"дизайн|web|designer|UX|UI|2d|3d|graphic", re.IGNORECASE),
         "marketer": re.compile(
-            r"marketing|маркетолог|SMM|SEO|digital|content|brand",
-            re.IGNORECASE,
+            r"marketing|маркетолог|SMM|SEO|digital|content|brand", re.IGNORECASE
         ),
         "salesman": re.compile(
-            r"продавец|консультант|sales|retail|account manager|кассир",
-            re.IGNORECASE,
+            r"продавец|консультант|sales|retail|account manager|кассир", re.IGNORECASE
         ),
         "installer": re.compile(r"монтажник|installer", re.IGNORECASE),
     }
@@ -84,10 +73,7 @@ class CityCategorizer(BaseCategoricalTextExtractor):
     PATTERNS: dict[str, re.Pattern] = {
         # --- Explicit cities ---
         "moscow": re.compile(r"\bмосква\b|\bmoscow\b", re.IGNORECASE),
-        "spb": re.compile(
-            r"\bсанкт[-\s]?петербург\b|\bспб\b|\bsaint petersburg\b",
-            re.IGNORECASE,
-        ),
+        "spb": re.compile(r"\bсанкт[-\s]?петербург\b|\bспб\b|\bsaint petersburg\b", re.IGNORECASE),
         # --- Large cities mapped to 'big' ---
         "big": re.compile(
             r"\b(екатеринбург|новосибирск|казань|нижний\s?новгород|челябинск|самара|омск|"
@@ -106,12 +92,8 @@ class RelocationReadinessExtractor(BaseCategoricalTextExtractor):
     """
 
     PATTERNS: dict[str, re.Pattern] = {
-        "no": re.compile(
-            r"не готов[а]? к переезду|not willing to relocate", re.IGNORECASE
-        ),
-        "yes": re.compile(
-            r"готов[а]? к переезду|willing to relocate", re.IGNORECASE
-        ),
+        "no": re.compile(r"не готов[а]? к переезду|not willing to relocate", re.IGNORECASE),
+        "yes": re.compile(r"готов[а]? к переезду|willing to relocate", re.IGNORECASE),
         "want": re.compile(r"хочу переехать|want to relocate", re.IGNORECASE),
     }
 
@@ -126,13 +108,9 @@ class BusinessTripReadinessExtractor(BaseCategoricalTextExtractor):
 
     PATTERNS: dict[str, re.Pattern] = {
         "no": re.compile(
-            r"не готов[а]? к командировкам|not prepared for business trips",
-            re.IGNORECASE,
+            r"не готов[а]? к командировкам|not prepared for business trips", re.IGNORECASE
         ),
-        "yes": re.compile(
-            r"готов[а]? к командировкам|prepared for business trips",
-            re.IGNORECASE,
-        ),
+        "yes": re.compile(r"готов[а]? к командировкам|prepared for business trips", re.IGNORECASE),
         "rarely": re.compile(
             r"готов[а]? к редким командировкам|prepared for occasional business trips",
             re.IGNORECASE,

@@ -36,9 +36,7 @@ class BaseSingleColumnTransformer(BaseEstimator, TransformerMixin, ABC):
         """
         self.output_column = output_column
 
-    def fit(
-        self, X: Union[pd.Series, pd.DataFrame], y: Optional[pd.Series] = None
-    ) -> Self:
+    def fit(self, X: Union[pd.Series, pd.DataFrame], y: Optional[pd.Series] = None) -> Self:
         """
         Fit the transformer and record the column name.
 
@@ -54,9 +52,7 @@ class BaseSingleColumnTransformer(BaseEstimator, TransformerMixin, ABC):
 
         self.feature_names_in_: list[str] = [name]
         self.feature_names_out_: list[str] = (
-            [self.output_column]
-            if self.output_column
-            else self.feature_names_in_.copy()
+            [self.output_column] if self.output_column else self.feature_names_in_.copy()
         )
 
         return self
@@ -76,9 +72,7 @@ class BaseSingleColumnTransformer(BaseEstimator, TransformerMixin, ABC):
         """
         pass
 
-    def get_feature_names_out(
-        self, input_features: Optional[list[str]] = None
-    ) -> list[str]:
+    def get_feature_names_out(self, input_features: Optional[list[str]] = None) -> list[str]:
         """
         Get output feature name(s) for the transformer.
 
@@ -92,9 +86,7 @@ class BaseSingleColumnTransformer(BaseEstimator, TransformerMixin, ABC):
             RuntimeError: If called before the transformer is fitted.
         """
         if not hasattr(self, "feature_names_out_"):
-            raise RuntimeError(
-                "Transformer must be fitted before calling 'get_feature_names_out'"
-            )
+            raise RuntimeError("Transformer must be fitted before calling 'get_feature_names_out'")
 
         return self.feature_names_out_
 
@@ -122,9 +114,7 @@ class BaseSingleColumnTransformer(BaseEstimator, TransformerMixin, ABC):
         elif isinstance(X, pd.Series):
             return X.copy()
         else:
-            raise TypeError(
-                "Input must be a pandas Series or a single-column DataFrame"
-            )
+            raise TypeError("Input must be a pandas Series or a single-column DataFrame")
 
 
 class BaseRowWiseTransformer(BaseSingleColumnTransformer):
@@ -149,18 +139,12 @@ class BaseRowWiseTransformer(BaseSingleColumnTransformer):
         Raises:
             RuntimeError: If transformer is not fitted.
         """
-        if not hasattr(self, "feature_names_in_") or not hasattr(
-            self, "feature_names_out_"
-        ):
-            raise RuntimeError(
-                "Transformer must be fitted before calling 'transform'"
-            )
+        if not hasattr(self, "feature_names_in_") or not hasattr(self, "feature_names_out_"):
+            raise RuntimeError("Transformer must be fitted before calling 'transform'")
 
         series = self._to_series(X)
         transformed = series.apply(self.process)
-        return pd.DataFrame(
-            {self.feature_names_out_[0]: transformed}, index=series.index
-        )
+        return pd.DataFrame({self.feature_names_out_[0]: transformed}, index=series.index)
 
     @abstractmethod
     def process(self, value: Any) -> Any:
@@ -259,7 +243,7 @@ class BaseTextListNormalizer(BaseRowWiseTransformer):
         if not isinstance(text, str):
             return []
 
-        items = [t.strip() for t in text.split(self.DELIMITER)]
+        items = [part.strip() for part in text.split(self.DELIMITER)]
         seen, result = set(), []
 
         for item in items:

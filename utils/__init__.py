@@ -7,12 +7,7 @@ and processing DataFrames.
 
 from utils.cleaning import clean_dataframe, clean_raw_dataframe
 from utils.io import save_x_y
-from utils.processing import (
-    create_column_transformer,
-    parse_data,
-    preprocess_dataframe,
-    split_x_y,
-)
+from utils.processing import create_column_transformer, parse_data, preprocess_dataframe, split_x_y
 
 __all__ = [
     "clean_dataframe",

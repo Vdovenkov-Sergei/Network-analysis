@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 import pandas as pd
 from sklearn.preprocessing import MultiLabelBinarizer
+from typing_extensions import Self
 
 from parsers.base import BaseSingleColumnTransformer, BaseTextListNormalizer
 
@@ -37,9 +38,7 @@ class MultiLabelTransformer(BaseSingleColumnTransformer):
         self.classes = classes
         self.mlb: Optional[MultiLabelBinarizer] = None
 
-    def fit(
-        self, X: Any, y: Optional[pd.Series] = None
-    ) -> "MultiLabelTransformer":
+    def fit(self, X: Any, y: Optional[pd.Series] = None) -> Self:
         """
         Fit the `MultiLabelBinarizer` on the input data.
 
@@ -60,14 +59,8 @@ class MultiLabelTransformer(BaseSingleColumnTransformer):
         self.mlb = MultiLabelBinarizer(classes=self.classes)
         self.mlb.fit(series.to_list())
 
-        prefix = (
-            self.output_column
-            if self.output_column
-            else self.feature_names_in_[0]
-        )
-        self.feature_names_out_: list[str] = [
-            f"{prefix}_{cls}" for cls in self.mlb.classes_
-        ]
+        prefix = self.output_column if self.output_column else self.feature_names_in_[0]
+        self.feature_names_out_: list[str] = [f"{prefix}_{cls}" for cls in self.mlb.classes_]
 
         return self
 
@@ -88,9 +81,7 @@ class MultiLabelTransformer(BaseSingleColumnTransformer):
             RuntimeError: If the transformer has not been fitted.
         """
         if self.mlb is None:
-            raise RuntimeError(
-                "Transformer must be fitted before calling 'transform'"
-            )
+            raise RuntimeError("Transformer must be fitted before calling 'transform'")
 
         series = self._to_series(X)
         rows_encoded = []
@@ -101,9 +92,7 @@ class MultiLabelTransformer(BaseSingleColumnTransformer):
             else:
                 rows_encoded.append(self.mlb.transform([row])[0])
 
-        return pd.DataFrame(
-            rows_encoded, columns=self.feature_names_out_, index=series.index
-        )
+        return pd.DataFrame(rows_encoded, columns=self.feature_names_out_, index=series.index)
 
 
 class EmploymentTypeNormalizer(BaseTextListNormalizer):

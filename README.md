@@ -1,11 +1,11 @@
 # Network Analysis
 
-A Python package for processing and analyzing Head Hunter job dataset. This project provides a structured pipeline for preprocessing job resume data, extracting features, and preparing data for machine learning models.
+A project for processing and analyzing `Head Hunter` job dataset. This project provides a structured pipeline for preprocessing job resume data, extracting features, and preparing data for machine learning models.
 
 ## Features
 
 - **Structured Parsers**: Modular transformer classes for extracting and processing features from raw data
-- **Pipeline Factory**: Easy creation of preprocessing pipelines for numerical, categorical, and multi-label features
+- **Pipeline Factory**: Easy creation of preprocessing pipelines for `numerical`, `categorical`, and `multi-label` features
 - **Data Cleaning**: Utilities for cleaning raw and processed DataFrames
 - **Command-Line Interface**: Simple CLI for processing CSV files and saving results
 
@@ -33,7 +33,6 @@ A Python package for processing and analyzing Head Hunter job dataset. This proj
 │   ├── __init__.py
 │   └── parser.py
 ├── app.py                # Main CLI application
-├── logger.py             # Logging utilities
 └── data/                 # Output directory (ignored by git)
 ```
 

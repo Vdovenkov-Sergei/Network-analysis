@@ -6,11 +6,11 @@ and saving the Head Hunter job dataset.
 """
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
 from config import COLUMN_TRANSFORMER_CONFIG
-from logger import get_logger
 from utils import parse_data, save_x_y, split_x_y
 
 
@@ -42,7 +42,12 @@ def create_arg_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     """Main entry point for the application."""
-    logger = get_logger(__name__)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    logger = logging.getLogger(__name__)
 
     try:
         parser = create_arg_parser()
@@ -51,44 +56,35 @@ def main() -> None:
         # --- Validate input file ---
         input_path = Path(args.input_file)
         if not input_path.exists():
-            raise FileNotFoundError(f"Input file not found: {input_path}")
-
+            raise FileNotFoundError(f"Input file not found: '{input_path}'")
         if not input_path.suffix.lower() == ".csv":
-            raise ValueError(
-                f"Input file must be a CSV file, got: {input_path.suffix}"
-            )
+            raise ValueError(f"Input file must be a CSV file, got: '{input_path.suffix}'")
 
-        logger.info("Loading data from: %s", input_path)
-        processed_data = parse_data(
-            str(input_path), config=COLUMN_TRANSFORMER_CONFIG
-        )
-
-        logger.info("Processed data shape: %s", processed_data.shape)
-        logger.info("Processed data columns: %s", len(processed_data.columns))
+        # --- Load and preprocess data ---
+        logger.info(f"Loading and processing data from '{input_path}'...")
+        processed_data = parse_data(str(input_path), config=COLUMN_TRANSFORMER_CONFIG)
+        logger.info(f"Processed data shape: {processed_data.shape}.")
+        logger.info(f"Processed data columns: {len(processed_data.columns)}.")
 
         # --- Split into X and y ---
         logger.info("Splitting into features (X) and target (y)...")
         X, y = split_x_y(processed_data, config=COLUMN_TRANSFORMER_CONFIG)
-
-        logger.info("Features (X) shape: %s", X.shape)
-        logger.info(
-            "Target (y) shape: %s",
-            y.shape if hasattr(y, "shape") else "Series",
-        )
+        logger.info(f"Features (X) shape: {X.shape}.")
+        logger.info(f"Target (y) shape: {y.shape}.")
 
         # --- Save to numpy files ---
         output_dir = Path(args.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
-        logger.info("Saving processed data to: %s", output_dir)
+        logger.info(f"Saving processed data to: '{output_dir}'.")
         save_x_y(X=X, y=y, path=output_dir, prefix=args.prefix)
 
-        logger.info("Processing completed successfully!")
+        logger.info("Processing completed successfully.")
     except (FileNotFoundError, ValueError) as exc:
-        logger.error("Error: %s", exc)
-        sys.exit(2)
+        logger.error(f"Error: {exc}.")
+        sys.exit(-2)
     except Exception as exc:
-        logger.exception("Unexpected error while processing data: %s", exc)
-        sys.exit(1)
+        logger.exception(f"Unexpected error: {exc}.")
+        sys.exit(-1)
 
 
 if __name__ == "__main__":

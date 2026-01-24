@@ -89,7 +89,7 @@ def preprocess_dataframe(
     df: pd.DataFrame, preprocessor: ColumnTransformer
 ) -> pd.DataFrame:
     """
-    Fit and transform a DataFrame using a ColumnTransformer, returning cleaned output.
+    Fit and transform a DataFrame using a ColumnTransformer, returning transformed output.
 
     This function automatically fits the preprocessor on the input DataFrame
     and returns the transformed result as DataFrame.
@@ -126,8 +126,7 @@ def preprocess_dataframe(
 
 
 def split_x_y(
-    df: pd.DataFrame,
-    config: dict[str, list[dict[str, Any]]],
+    df: pd.DataFrame, config: dict[str, list[dict[str, Any]]]
 ) -> tuple[pd.DataFrame, Union[pd.Series, pd.DataFrame]]:
     """
     Split a fully preprocessed DataFrame into X and y.
@@ -175,8 +174,7 @@ def split_x_y(
 
 
 def parse_data(
-    filepath: str,
-    config: dict[str, list[dict[str, Any]]],
+    filepath: str, config: dict[str, list[dict[str, Any]]]
 ) -> pd.DataFrame:
     """
     Load, preprocess, and clean a dataset from CSV.

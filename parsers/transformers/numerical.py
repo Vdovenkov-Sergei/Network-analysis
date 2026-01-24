@@ -10,6 +10,7 @@ from xml.etree import ElementTree
 
 import pandas as pd
 import requests
+from typing_extensions import Self
 
 from parsers.base import BaseRowWiseTransformer
 
@@ -22,9 +23,7 @@ class IQRMasker(BaseRowWiseTransformer):
     Outliers are replaced with None according to [Q1 - k * IQR, Q3 + k * IQR].
     """
 
-    def __init__(
-        self, output_column: Optional[str] = None, k: float = 1.5
-    ) -> None:
+    def __init__(self, output_column: Optional[str] = None, k: float = 1.5) -> None:
         """
         Initialize the transformer.
 
@@ -37,7 +36,7 @@ class IQRMasker(BaseRowWiseTransformer):
         self.lower_: Optional[float] = None
         self.upper_: Optional[float] = None
 
-    def fit(self, X: Any, y: Optional[pd.Series] = None) -> "IQRMasker":
+    def fit(self, X: Any, y: Optional[pd.Series] = None) -> Self:
         """
         Compute IQR-based bounds for a single numeric column.
 
@@ -92,9 +91,7 @@ class AgeExtractor(BaseRowWiseTransformer):
     return None.
     """
 
-    AGE_PATTERN: re.Pattern = re.compile(
-        r"(\d+)\s*(лет|года|год|years?|yrs?)", re.IGNORECASE
-    )
+    AGE_PATTERN: re.Pattern = re.compile(r"(\d+)\s*(лет|года|год|years?|yrs?)", re.IGNORECASE)
 
     def process(self, text: Any) -> Optional[int]:
         """
@@ -176,9 +173,7 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
         - Non-numeric or unrecognized currency inputs return None.
     """
 
-    CBR_URL_TEMPLATE: str = (
-        "https://www.cbr.ru/scripts/XML_daily.asp?date_req={date}"
-    )
+    CBR_URL_TEMPLATE: str = "https://www.cbr.ru/scripts/XML_daily.asp?date_req={date}"
     DEFAULT_ALIASES: dict[str, str] = {
         "руб.": "RUB",
         "руб": "RUB",
@@ -188,9 +183,7 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
         "бел руб": "BYN",
     }
 
-    def __init__(
-        self, output_column: Optional[str] = None, year: Optional[int] = None
-    ) -> None:
+    def __init__(self, output_column: Optional[str] = None, year: Optional[int] = None) -> None:
         """
         Args:
             output_column: Name of the output column. If None, the input column name is used.
@@ -200,9 +193,7 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
         self.year = year or datetime.now().year
         self.exchange_rates: dict[str, float] = {}
 
-    def fit(
-        self, X: Any, y: Optional[pd.Series] = None
-    ) -> "CurrencyToRUBTransformer":
+    def fit(self, X: Any, y: Optional[pd.Series] = None) -> Self:
         """
         Fetch exchange rates for the specified year from CBR.
 
@@ -250,9 +241,7 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
             str: Canonical 3-letter currency code
         """
         # --- Try 3-letter code at the end ---
-        match_obj = re.search(
-            r"([A-Za-z]{3})$", value.strip(), flags=re.IGNORECASE
-        )
+        match_obj = re.search(r"([A-Za-z]{3})$", value.strip(), flags=re.IGNORECASE)
         code = match_obj.group(1).upper() if match_obj else None
 
         # --- Try aliases if not found ---
@@ -304,9 +293,7 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
                 resp.raise_for_status()
                 root = ElementTree.fromstring(resp.content)
             except (requests.RequestException, ElementTree.ParseError) as exc:
-                warnings.warn(
-                    f"Failed to fetch CBR rates for {date:%d/%m/%Y}: {exc}"
-                )
+                warnings.warn(f"Failed to fetch CBR rates for {date:%d/%m/%Y}: {exc}")
                 continue
 
             for valute in root.findall("Valute"):
@@ -314,11 +301,7 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
                 nominal_node = valute.find("Nominal")
                 value_node = valute.find("Value")
 
-                if (
-                    code_node is None
-                    or nominal_node is None
-                    or value_node is None
-                ):
+                if code_node is None or nominal_node is None or value_node is None:
                     continue
 
                 code_text = code_node.text
@@ -337,7 +320,7 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
             raise RuntimeError("Failed to fetch CBR rates for all months.")
 
         # --- Compute average rates ---
-        avg_rates = {c: sum(v) / len(v) for c, v in rates.items()}
+        avg_rates = {code: sum(values) / len(values) for code, values in rates.items()}
         return avg_rates
 
     @staticmethod

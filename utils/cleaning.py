@@ -87,9 +87,7 @@ def clean_dataframe(
 
     # --- Remove rows with unknown labels ---
     unknown_cols = [
-        col
-        for col in df_clean.columns
-        if unknown_column_pattern.lower() in col.lower()
+        col for col in df_clean.columns if unknown_column_pattern.lower() in col.lower()
     ]
     if unknown_cols:
         mask_unknown = (df_clean[unknown_cols] != 1).all(axis=1)
@@ -106,9 +104,7 @@ def clean_dataframe(
     # --- Remove constant columns ---
     if remove_constant_columns:
         constant_cols = [
-            col
-            for col in df_clean.columns
-            if df_clean[col].nunique(dropna=False) <= 1
+            col for col in df_clean.columns if df_clean[col].nunique(dropna=False) <= 1
         ]
         df_clean = df_clean.drop(columns=constant_cols)
 

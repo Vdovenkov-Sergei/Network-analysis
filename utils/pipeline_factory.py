@@ -62,9 +62,7 @@ class PipelineFactory:
             steps.append(("iqr_masker", IQRMasker(k=iqr_k)))
 
         if use_scaler:
-            steps.append(
-                ("min_max_scaler", MinMaxScaler(feature_range=scaler_range))
-            )
+            steps.append(("min_max_scaler", MinMaxScaler(feature_range=scaler_range)))
 
         return Pipeline(steps)
 
@@ -133,9 +131,7 @@ class PipelineFactory:
             [
                 (
                     "normalizer",
-                    normalizer_cls(
-                        output_column=column_name, **normalizer_kwargs
-                    ),
+                    normalizer_cls(output_column=column_name, **normalizer_kwargs),
                 ),
                 (
                     "multi_label_binarizer",
@@ -167,9 +163,7 @@ class PipelineFactory:
             [
                 (
                     "transformer",
-                    transformer_cls(
-                        output_column=column_name, **transformer_kwargs
-                    ),
+                    transformer_cls(output_column=column_name, **transformer_kwargs),
                 )
             ]
         )
