@@ -1,24 +1,24 @@
-"""
-Configuration for data parsing pipeline.
+"""Configuration for data parsing pipeline.
 
 This module contains the configuration dictionary that defines how each column
 in the Head Hunter dataset should be processed and transformed. The keys in the
 config must match the raw CSV column names (including typos and punctuation).
 """
 
-from parsers import (
-    AgeExtractor,
+from parsers.transformers.categorical import (
     BusinessTripReadinessExtractor,
     CarOwnershipExtractor,
     CityCategorizer,
-    CurrencyToRUBTransformer,
     EducationLevelExtractor,
-    EmploymentTypeNormalizer,
-    ExperienceInMonthsExtractor,
     GenderExtractor,
     RelocationReadinessExtractor,
     WorkPositionCategorizer,
-    WorkScheduleNormalizer,
+)
+from parsers.transformers.multilabel import EmploymentTypeNormalizer, WorkScheduleNormalizer
+from parsers.transformers.numerical import (
+    AgeExtractor,
+    CurrencyToRUBTransformer,
+    ExperienceInMonthsExtractor,
 )
 
 # --- Configuration dictionary for column transformers ---
@@ -27,9 +27,10 @@ COLUMN_TRANSFORMER_CONFIG = {
     "ЗП": [
         {
             "role": "y",
-            "type": "simple",
+            "type": "numerical",
             "transformer": CurrencyToRUBTransformer,
             "output_column": "salary",
+            "params": {"iqr_k": 3.5, "use_scaler": False},
             "transformer_kwargs": {"year": 2019},
         }
     ],

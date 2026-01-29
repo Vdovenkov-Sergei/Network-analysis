@@ -1,9 +1,14 @@
-"""
-Data processing utilities.
+"""Data processing utilities.
+
+This module provides functions for creating a ColumnTransformer from a configuration dictionary,
+preprocessing a DataFrame using the ColumnTransformer, splitting a DataFrame into X and y,
+and saving the processed data to .npy files.
 """
 
+from pathlib import Path
 from typing import Any, Union
 
+import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 
@@ -75,9 +80,7 @@ def create_column_transformer(
             else:
                 raise ValueError(f"Unknown pipeline type: {pipeline_type}")
 
-            transformers.append(
-                (f"{input_col}_{column_name}_pipe", pipeline, [input_col])
-            )
+            transformers.append((f"{input_col}_{column_name}_pipe", pipeline, [input_col]))
 
     return ColumnTransformer(
         transformers=transformers,
@@ -85,9 +88,7 @@ def create_column_transformer(
     )
 
 
-def preprocess_dataframe(
-    df: pd.DataFrame, preprocessor: ColumnTransformer
-) -> pd.DataFrame:
+def preprocess_dataframe(df: pd.DataFrame, preprocessor: ColumnTransformer) -> pd.DataFrame:
     """
     Fit and transform a DataFrame using a ColumnTransformer, returning transformed output.
 
@@ -105,24 +106,16 @@ def preprocess_dataframe(
         KeyError: If required input columns are missing from `df`.
     """
     # --- Verify that all required columns exist ---
-    required_columns = [
-        col for _, _, cols in preprocessor.transformers for col in cols
-    ]
-    missing_columns = [
-        col for col in required_columns if col not in df.columns
-    ]
+    required_columns = [col for _, _, cols in preprocessor.transformers for col in cols]
+    missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
-        raise KeyError(
-            f"Input DataFrame is missing required columns: {missing_columns}"
-        )
+        raise KeyError(f"Input DataFrame is missing required columns: {missing_columns}")
 
     # --- Fit and transform ---
     transformed_array = preprocessor.fit_transform(df)
 
     feature_names = preprocessor.get_feature_names_out()
-    return pd.DataFrame(
-        transformed_array, columns=feature_names, index=df.index
-    )
+    return pd.DataFrame(transformed_array, columns=feature_names, index=df.index)
 
 
 def split_x_y(
@@ -162,9 +155,7 @@ def split_x_y(
     # --- Validate presence of target columns ---
     missing = set(y_columns) - set(df.columns)
     if missing:
-        raise ValueError(
-            f"Target columns missing in DataFrame: {sorted(missing)}"
-        )
+        raise ValueError(f"Target columns missing in DataFrame: {sorted(missing)}")
 
     # --- Split ---
     X = df.drop(columns=y_columns)
@@ -173,9 +164,7 @@ def split_x_y(
     return (X, y) if y.shape[1] > 1 else (X, y.iloc[:, 0])
 
 
-def parse_data(
-    filepath: str, config: dict[str, list[dict[str, Any]]]
-) -> pd.DataFrame:
+def parse_data(filepath: str, config: dict[str, list[dict[str, Any]]]) -> pd.DataFrame:
     """
     Load, preprocess, and clean a dataset from CSV.
 
@@ -203,9 +192,7 @@ def parse_data(
     df = clean_raw_dataframe(df)
 
     # --- Create ColumnTransformer with pipelines ---
-    preprocessor = create_column_transformer(
-        config, verbose_feature_names_out=False
-    )
+    preprocessor = create_column_transformer(config, verbose_feature_names_out=False)
 
     # --- Preprocess DataFrame ---
     transformed_df = preprocess_dataframe(df, preprocessor)
@@ -214,3 +201,37 @@ def parse_data(
     final_df = clean_dataframe(transformed_df)
 
     return final_df
+
+
+def save_x_y(
+    X: pd.DataFrame,
+    y: Union[pd.Series, pd.DataFrame],
+    path: Union[str, Path],
+    prefix: str = "",
+) -> None:
+    """
+    Save feature matrix X and target y to .npy files.
+
+    Files created:
+        {prefix}X_data.npy
+        {prefix}y_data.npy
+        {prefix}feature_names.npy
+        {prefix}target_names.npy
+
+    Args:
+        X: Feature DataFrame.
+        y: Target variable (Series or DataFrame).
+        path: Directory to save files.
+        prefix: Optional filename prefix.
+    """
+    path = Path(path)
+    path.mkdir(parents=True, exist_ok=True)
+
+    np.save(path / f"{prefix}X_data.npy", X.to_numpy())
+    np.save(path / f"{prefix}feature_names.npy", X.columns.to_numpy())
+
+    np.save(path / f"{prefix}y_data.npy", y.to_numpy())
+    if isinstance(y, pd.Series):
+        np.save(path / f"{prefix}target_names.npy", np.array([y.name]))
+    else:
+        np.save(path / f"{prefix}target_names.npy", y.columns.to_numpy())

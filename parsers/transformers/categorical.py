@@ -4,7 +4,7 @@ Categorical text transformers.
 
 import re
 
-from parsers.base import BaseCategoricalTextExtractor
+from parsers.base.core import BaseCategoricalTextExtractor
 
 
 class GenderExtractor(BaseCategoricalTextExtractor):

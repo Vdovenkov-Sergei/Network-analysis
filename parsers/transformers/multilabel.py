@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.preprocessing import MultiLabelBinarizer
 from typing_extensions import Self
 
-from parsers.base import BaseSingleColumnTransformer, BaseTextListNormalizer
+from parsers.base.core import BaseSingleColumnTransformer, BaseTextListNormalizer
 
 
 class MultiLabelTransformer(BaseSingleColumnTransformer):

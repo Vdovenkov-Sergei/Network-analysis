@@ -1,5 +1,4 @@
-"""
-Data cleaning utilities.
+"""Data cleaning utilities.
 
 This module contains functions for cleaning raw and processed DataFrames.
 """

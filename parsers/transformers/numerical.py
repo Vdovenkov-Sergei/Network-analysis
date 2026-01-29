@@ -12,7 +12,7 @@ import pandas as pd
 import requests
 from typing_extensions import Self
 
-from parsers.base import BaseRowWiseTransformer
+from parsers.base.core import BaseRowWiseTransformer
 
 
 class IQRMasker(BaseRowWiseTransformer):
