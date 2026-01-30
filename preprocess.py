@@ -1,57 +1,43 @@
-"""
-Main application for processing Head Hunter dataset.
+"""Data preprocessing script for Head Hunter dataset.
 
-This script provides a command-line interface for loading, preprocessing,
-and saving the Head Hunter job dataset.
+This script provides a command-line interface for loading raw CSV data,
+applying feature transformations, and saving preprocessed data as NumPy arrays.
+
+Usage:
+    python preprocess.py data/hh.csv -o data
+
+Output files:
+    - X_data.npy: Feature matrix
+    - y_data.npy: Target variable (salary in RUB)
+    - feature_names.npy: Feature column names
+    - target_names.npy: Target column names
 """
 
-import argparse
-import logging
 import sys
 from pathlib import Path
 
-from config import COLUMN_TRANSFORMER_CONFIG
-from utils import parse_data, save_x_y, split_x_y
-
-
-def create_arg_parser() -> argparse.ArgumentParser:
-    """Create and return the CLI argument parser."""
-    parser = argparse.ArgumentParser(
-        description="Process Head Hunter dataset and save preprocessed data."
-    )
-    parser.add_argument(
-        "input_file",
-        type=str,
-        help="Path to the input CSV file containing Head Hunter data",
-    )
-    parser.add_argument(
-        "-o",
-        "--output-dir",
-        type=str,
-        default="data",
-        help="Output directory for processed data (default: data)",
-    )
-    parser.add_argument(
-        "--prefix",
-        type=str,
-        default="",
-        help="Optional prefix for output files (default: empty)",
-    )
-    return parser
+from config.cli import create_preprocess_parser
+from config.parser import COLUMN_TRANSFORMER_CONFIG
+from utils.logging import setup_logger
+from utils.processing import parse_data, save_x_y, split_x_y
 
 
 def main() -> None:
-    """Main entry point for the application."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    logger = logging.getLogger(__name__)
+    """Main entry point for the preprocessing script.
 
+    Loads raw CSV data, applies transformations defined in COLUMN_TRANSFORMER_CONFIG,
+    and saves the resulting feature matrix (X) and target vector (y) as NumPy arrays.
+
+    Exit codes:
+        0: Success
+        -1: Unexpected error
+        -2: Validation error (file not found, wrong format)
+    """
     try:
-        parser = create_arg_parser()
+        parser = create_preprocess_parser()
         args = parser.parse_args()
+
+        logger = setup_logger(logger_name="Preprocess", log_level=args.log_level)
 
         # --- Validate input file ---
         input_path = Path(args.input_file)
@@ -73,7 +59,7 @@ def main() -> None:
         logger.info(f"Target (y) shape: {y.shape}.")
 
         # --- Save to numpy files ---
-        output_dir = Path(args.output_dir)
+        output_dir = Path(args.output_dir) / "processed"
         output_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Saving processed data to: '{output_dir}'.")
         save_x_y(X=X, y=y, path=output_dir, prefix=args.prefix)

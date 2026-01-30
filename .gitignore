@@ -172,3 +172,5 @@ pyrightconfig.json
 
 # Project specific
 data/
+resources/
+lightning_logs/

@@ -1,5 +1,4 @@
-"""
-Pipeline creation utilities.
+"""Pipeline creation utilities.
 
 This module contains functions for creating preprocessing pipelines.
 """
@@ -9,13 +8,14 @@ from typing import Any, Optional
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 
-from parsers.base import (
+from parsers.base.core import (
     BaseCategoricalTextExtractor,
     BaseRowWiseTransformer,
     BaseSingleColumnTransformer,
     BaseTextListNormalizer,
 )
-from parsers.transformers import IQRMasker, MultiLabelTransformer
+from parsers.transformers.multilabel import MultiLabelTransformer
+from parsers.transformers.numerical import IQRMasker
 
 
 class PipelineFactory:
