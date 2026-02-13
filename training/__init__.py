@@ -1,1 +1,1 @@
-"""Package for training different models."""
+"""Training package: base model, metrics, regressors, classifiers."""

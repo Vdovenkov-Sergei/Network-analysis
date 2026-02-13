@@ -1,59 +1,56 @@
-"""
-Numeric transformers.
-"""
+"""Numeric transformers."""
 
 import re
 import warnings
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from xml.etree import ElementTree
 
 import pandas as pd
 import requests
 from typing_extensions import Self
 
-from parsers.base.core import BaseRowWiseTransformer
+from parsers.base.core import BaseRowWiseTransformerSingle
 
 
-class IQRMasker(BaseRowWiseTransformer):
-    """
-    Transformer that detects outliers using the IQR rule and replaces them with None.
+class IQRMasker(BaseRowWiseTransformerSingle):
+    """Transformer that detects outliers using the IQR rule and replaces them with None.
 
     Processes one numeric column at a time. Non-numeric values are ignored.
     Outliers are replaced with None according to [Q1 - k * IQR, Q3 + k * IQR].
     """
 
-    def __init__(self, output_column: Optional[str] = None, k: float = 1.5) -> None:
-        """
-        Initialize the transformer.
+    def __init__(
+        self,
+        output_column: Optional[str] = None,
+        k: float = 2.5,
+    ) -> None:
+        """Initialize the transformer.
 
         Args:
-            output_column: Name of the output column. If None, the input column name is used.
-            k: IQR multiplier used to determine outlier thresholds.
+            output_column: Output column name; if None, input name used.
+            k: IQR multiplier for outlier thresholds.
         """
         super().__init__(output_column=output_column)
         self.k = k
         self.lower_: Optional[float] = None
         self.upper_: Optional[float] = None
 
-    def fit(self, X: Any, y: Optional[pd.Series] = None) -> Self:
-        """
-        Compute IQR-based bounds for a single numeric column.
+    def fit(self, X: Union[pd.Series, pd.DataFrame], y: Optional[pd.Series] = None) -> Self:
+        """Compute IQR-based bounds for a single numeric column.
 
         Args:
             X: Single numeric column (Series or single-column DataFrame)
             y: Target values (ignored)
 
         Returns:
-            self: Fitted transformer.
+            Fitted transformer.
 
         Raises:
             ValueError: If input column is not numeric.
         """
+        super().fit(X=X, y=y)
         series = self._to_series(X)
-
-        if not pd.api.types.is_numeric_dtype(series):
-            raise ValueError("Transformer requires a numeric column")
 
         q1 = series.quantile(0.25)
         q3 = series.quantile(0.75)
@@ -62,18 +59,16 @@ class IQRMasker(BaseRowWiseTransformer):
         self.lower_ = q1 - self.k * iqr
         self.upper_ = q3 + self.k * iqr
 
-        super().fit(X=X, y=y)
         return self
 
     def process(self, value: Any) -> Any:
-        """
-        Replace a value with None if it is outside the IQR bounds.
+        """Replace value with None if outside IQR bounds.
 
         Args:
             value: Numeric value
 
         Returns:
-            Original value or None if it is an outlier
+            Original value or None if outlier.
         """
         if value is None or pd.isna(value):
             return None
@@ -82,9 +77,8 @@ class IQRMasker(BaseRowWiseTransformer):
         return value
 
 
-class AgeExtractor(BaseRowWiseTransformer):
-    """
-    Transformer that extracts the first age value from a column.
+class AgeExtractor(BaseRowWiseTransformerSingle):
+    """Transformer that extracts the first age value from a column.
 
     The transformer looks for patterns like "25 лет", "30 года", "20 years", etc.,
     and returns the first integer found. Non-string inputs or texts without a match
@@ -94,8 +88,7 @@ class AgeExtractor(BaseRowWiseTransformer):
     AGE_PATTERN: re.Pattern = re.compile(r"(\d+)\s*(лет|года|год|years?|yrs?)", re.IGNORECASE)
 
     def process(self, text: Any) -> Optional[int]:
-        """
-        Extract age value from a single text entry.
+        """Extract age from a single text entry.
 
         Args:
             text: Input string containing age information.
@@ -118,9 +111,8 @@ class AgeExtractor(BaseRowWiseTransformer):
         return None
 
 
-class ExperienceInMonthsExtractor(BaseRowWiseTransformer):
-    """
-    Transformer to extract work experience from a column into total months.
+class ExperienceInMonthsExtractor(BaseRowWiseTransformerSingle):
+    """Transformer to extract work experience from a column into total months.
 
     Only parses text after the first occurrence of 'Опыт работы'.
     Parses strings containing years and months in Russian or English and returns
@@ -134,8 +126,7 @@ class ExperienceInMonthsExtractor(BaseRowWiseTransformer):
     )
 
     def process(self, text: Any) -> Optional[int]:
-        """
-        Extract total months of experience from a single text entry.
+        """Extract total months of experience from a single text entry.
 
         Args:
             text: Input string containing experience information.
@@ -160,9 +151,8 @@ class ExperienceInMonthsExtractor(BaseRowWiseTransformer):
         return total_months
 
 
-class CurrencyToRUBTransformer(BaseRowWiseTransformer):
-    """
-    Transformer that converts currency amounts to RUB (Russian Rubles).
+class CurrencyToRUBTransformer(BaseRowWiseTransformerSingle):
+    """Transformer that converts currency amounts to RUB (Russian Rubles).
 
     This transformer handles strings containing an amount and a currency code,
     converts the amount to RUB using the Central Bank of Russia (CBR) exchange
@@ -183,35 +173,38 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
         "бел руб": "BYN",
     }
 
-    def __init__(self, output_column: Optional[str] = None, year: Optional[int] = None) -> None:
-        """
+    def __init__(
+        self,
+        output_column: Optional[str] = None,
+        year: Optional[int] = None,
+    ) -> None:
+        """Initialize the transformer.
+
         Args:
-            output_column: Name of the output column. If None, the input column name is used.
+            output_column: Output column name; if None, input name used.
             year: Year for which to fetch exchange rates from CBR. If None, current year is used.
         """
         super().__init__(output_column=output_column)
         self.year = year or datetime.now().year
         self.exchange_rates: dict[str, float] = {}
 
-    def fit(self, X: Any, y: Optional[pd.Series] = None) -> Self:
-        """
-        Fetch exchange rates for the specified year from CBR.
+    def fit(self, X: Union[pd.Series, pd.DataFrame], y: Optional[pd.Series] = None) -> Self:
+        """Fetch exchange rates for the specified year from CBR.
 
         Args:
             X: Input data (Series or single-column DataFrame).
             y: Target values (ignored).
 
         Returns:
-            self: Fitted transformer.
+            Fitted transformer.
         """
+        super().fit(X=X, y=y)
         self.exchange_rates = self._fetch_annual_cbr_rates(self.year)
         self.exchange_rates["RUB"] = 1.0
-        super().fit(X=X, y=y)
         return self
 
     def process(self, value: Any) -> Optional[float]:
-        """
-        Convert a single currency value to RUB (Russian Rubles).
+        """Convert a single currency value to RUB (Russian Rubles).
 
         Args:
             value: Input value containing an amount and optional currency code.
@@ -231,14 +224,13 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
         return number * rate
 
     def _extract_currency_code(self, value: str) -> str:
-        """
-        Extract the currency code from a string.
+        """Extract the currency code from a string.
 
         Args:
             value: String containing the currency
 
         Returns:
-            str: Canonical 3-letter currency code
+            Canonical 3-letter currency code.
         """
         # --- Try 3-letter code at the end ---
         match_obj = re.search(r"([A-Za-z]{3})$", value.strip(), flags=re.IGNORECASE)
@@ -254,8 +246,7 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
         return code or "RUB"
 
     def _extract_numeric(self, value: str) -> Optional[float]:
-        """
-        Extract the numeric portion from a string and convert it to float.
+        """Extract numeric portion from a string and convert to float.
 
         Args:
             value: String containing a number
@@ -270,8 +261,7 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
             return None
 
     def _fetch_annual_cbr_rates(self, year: int) -> dict[str, float]:
-        """
-        Fetch average exchange rates from the Central Bank of Russia (CBR) for a given year.
+        """Fetch average exchange rates from the Central Bank of Russia (CBR) for a given year.
 
         Args:
             year: Year for which to fetch exchange rates (e.g., 2019).
@@ -325,15 +315,14 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformer):
 
     @staticmethod
     def _get_last_valid_day(year: int, month: int) -> datetime:
-        """
-        Return the last valid day of a month for a given year.
+        """Return the last valid day of a month for a given year.
 
         Args:
             year: Year.
             month: Month (1-12).
 
         Returns:
-            datetime object representing the last valid day of the month.
+            Datetime object representing the last valid day of the month.
         """
         day = 31
         while True:
