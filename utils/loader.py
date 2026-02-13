@@ -164,7 +164,7 @@ class DataLoader:
         # --- Check if data is loaded ---
         if self._X is None or self._y is None:
             raise RuntimeError("Data not loaded. Call load() first.")
-        
+
         # --- Validate ratios ---
         total_ratio = train_ratio + test_ratio
         if not np.isclose(total_ratio, 1.0):
