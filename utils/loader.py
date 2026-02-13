@@ -130,24 +130,28 @@ class DataLoader:
     @property
     def n_samples(self) -> int:
         """Get number of samples."""
+        if self._X is None:
+            raise RuntimeError("Data not loaded. Call load() first.")
         return self.X.shape[0]
 
     @property
     def n_features(self) -> int:
         """Get number of features."""
+        if self._X is None:
+            raise RuntimeError("Data not loaded. Call load() first.")
         return self.X.shape[1]
 
     def split(
         self,
         train_ratio: float = 0.7,
-        test_ratio: float = 0.15,
+        test_ratio: float = 0.3,
         shuffle: bool = True,
     ) -> DataSplit:
         """Split data into train and test sets.
 
         Args:
             train_ratio: Fraction of data for training (default: 0.7).
-            test_ratio: Fraction of data for testing (default: 0.15).
+            test_ratio: Fraction of data for testing (default: 0.3).
             shuffle: Whether to shuffle data before splitting (default: True).
 
         Returns:
@@ -157,6 +161,10 @@ class DataLoader:
             ValueError: If ratios don't sum to 1.0 or are invalid.
             RuntimeError: If data is not loaded.
         """
+        # --- Check if data is loaded ---
+        if self._X is None or self._y is None:
+            raise RuntimeError("Data not loaded. Call load() first.")
+        
         # --- Validate ratios ---
         total_ratio = train_ratio + test_ratio
         if not np.isclose(total_ratio, 1.0):
