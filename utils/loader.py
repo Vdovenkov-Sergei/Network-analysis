@@ -1,8 +1,7 @@
 """Utilities for loading and splitting preprocessed datasets.
 
-This module provides a DataLoader class for loading preprocessed NumPy data,
-splitting datasets into train/validation/test sets and a BatchIterator class
-for iterating over the data in batches.
+Provides DataLoader for loading preprocessed NumPy data and splitting into
+train/test, and DataSplit dataclass.
 """
 
 from dataclasses import dataclass
@@ -15,23 +14,25 @@ from typing_extensions import Self
 
 @dataclass
 class DataSplit:
-    """Container for train/validation/test data splits.
+    """Container for train/test data splits.
 
     Attributes:
         X_train: Training features.
         y_train: Training targets.
         X_test: Test features.
         y_test: Test targets.
-        feature_names: Names of features.
-        target_names: Names of targets.
+        feature_columns: List of feature columns (optional).
+        target_column: Name of target column (optional).
+        class_labels: List of class labels (optional).
     """
 
     X_train: np.ndarray
     y_train: np.ndarray
     X_test: np.ndarray
     y_test: np.ndarray
-    feature_names: np.ndarray
-    target_names: np.ndarray
+    feature_columns: Optional[list[str]] = None
+    target_column: Optional[str] = None
+    class_labels: Optional[list[str]] = None
 
 
 class DataLoader:
@@ -65,8 +66,9 @@ class DataLoader:
 
         self._X: Optional[np.ndarray] = None
         self._y: Optional[np.ndarray] = None
-        self._feature_names: Optional[np.ndarray] = None
-        self._target_names: Optional[np.ndarray] = None
+        self._feature_columns: Optional[list[str]] = None
+        self._target_column: Optional[str] = None
+        self._class_labels: Optional[list[str]] = None
 
     def load(self) -> Self:
         """Load preprocessed data from NumPy files.
@@ -79,11 +81,20 @@ class DataLoader:
         """
         self._X = np.load(self.data_dir / f"{self.prefix}X_data.npy")
         self._y = np.load(self.data_dir / f"{self.prefix}y_data.npy")
-        self._feature_names = np.load(
-            self.data_dir / f"{self.prefix}feature_names.npy", allow_pickle=True
+
+        fc_path = self.data_dir / f"{self.prefix}feature_columns.npy"
+        self._feature_columns = (
+            np.load(fc_path, allow_pickle=True).tolist() if fc_path.exists() else None
         )
-        self._target_names = np.load(
-            self.data_dir / f"{self.prefix}target_names.npy", allow_pickle=True
+        tc_path = self.data_dir / f"{self.prefix}target_column.npy"
+        self._target_column = (
+            next(iter(np.load(tc_path, allow_pickle=True).tolist()), None)
+            if tc_path.exists()
+            else None
+        )
+        cl_path = self.data_dir / f"{self.prefix}class_labels.npy"
+        self._class_labels = (
+            np.load(cl_path, allow_pickle=True).tolist() if cl_path.exists() else None
         )
         return self
 
@@ -102,18 +113,19 @@ class DataLoader:
         return self._y
 
     @property
-    def feature_names(self) -> np.ndarray:
+    def feature_columns(self) -> Optional[list[str]]:
         """Get feature names."""
-        if self._feature_names is None:
-            raise RuntimeError("Data not loaded. Call load() first.")
-        return self._feature_names
+        return self._feature_columns
 
     @property
-    def target_names(self) -> np.ndarray:
-        """Get target names."""
-        if self._target_names is None:
-            raise RuntimeError("Data not loaded. Call load() first.")
-        return self._target_names
+    def target_column(self) -> Optional[str]:
+        """Get target column."""
+        return self._target_column
+
+    @property
+    def class_labels(self) -> Optional[list[str]]:
+        """Get class labels."""
+        return self._class_labels
 
     @property
     def n_samples(self) -> int:
@@ -173,6 +185,7 @@ class DataLoader:
             y_train=self.y[train_idx],
             X_test=self.X[test_idx],
             y_test=self.y[test_idx],
-            feature_names=self.feature_names,
-            target_names=self.target_names,
+            feature_columns=self.feature_columns,
+            target_column=self.target_column,
+            class_labels=self.class_labels,
         )

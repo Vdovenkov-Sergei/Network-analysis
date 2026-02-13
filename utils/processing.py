@@ -1,237 +1,312 @@
 """Data processing utilities.
 
-This module provides functions for creating a ColumnTransformer from a configuration dictionary,
-preprocessing a DataFrame using the ColumnTransformer, splitting a DataFrame into X and y,
-and saving the processed data to .npy files.
+This module provides functions for transforming raw data, applying engineering steps,
+encoding features and target to numeric arrays with proper cleaning between stages.
 """
 
-from pathlib import Path
-from typing import Any, Union
+from typing import Optional
 
-import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler, OneHotEncoder, OrdinalEncoder
 
+from config.specs import EncodingSpec, TargetSpec, TransformerSpec
+from parsers.transformers.multilabel import MultiLabelTransformer
+from parsers.transformers.numerical import IQRMasker
 from utils.cleaning import clean_dataframe, clean_raw_dataframe
-from utils.pipeline_factory import PipelineFactory
 
 
-def create_column_transformer(
-    config: dict[str, list[dict[str, Any]]],
-    verbose_feature_names_out: bool = False,
-) -> ColumnTransformer:
-    """
-    Create ColumnTransformer from configuration dictionary.
+def _build_column_transformer(config: list[TransformerSpec]) -> ColumnTransformer:
+    """Build ColumnTransformer from list of TransformerSpec.
 
     Args:
-        config: Configuration dictionary with column specifications.
-               Each key is an input column name, value is a list of dicts with:
-               - 'type': Pipeline type ('numerical', 'categorical', 'multi_label', 'simple')
-               - 'transformer': Transformer class
-               - 'output_column': Name for the output column
-               - 'params': Optional dict of pipeline parameters
-               - 'transformer_kwargs': Optional dict of transformer arguments
-        verbose_feature_names_out: Whether to include transformer names in feature names
+        config: List of TransformerSpec with transformer class and column info.
 
     Returns:
-        Configured ColumnTransformer.
+        ColumnTransformer applying each spec to its input columns.
+    """
+    transformers_list = [
+        (
+            f"transform_{i}",
+            spec.transformer(
+                output_column=spec.output_column,
+                **(spec.params or {}),
+            ),
+            spec.input_columns,
+        )
+        for i, spec in enumerate(config)
+    ]
+    return ColumnTransformer(transformers=transformers_list, verbose_feature_names_out=False)
+
+
+def _build_encoding_pipeline(column: str, encoding_config: EncodingSpec) -> Pipeline:
+    """Build a single-column encoding Pipeline from EncodingSpec.
+
+    Args:
+        column: Column name to encode.
+        encoding_config: Encoding specification with column categories.
+
+    Returns:
+        Pipeline with encoding steps for this column.
 
     Raises:
-        ValueError: If pipeline type is not one of supported types.
+        ValueError: If column is not in any encoding category.
     """
-    transformers = []
+    steps = []
+    if column in encoding_config.one_hot:
+        steps.append(("onehot", OneHotEncoder(sparse_output=False)))
+    if column in encoding_config.label_encode:
+        steps.append(("ordinal", OrdinalEncoder()))
+    if column in encoding_config.multi_label:
+        steps.append(("multilabel", MultiLabelTransformer(output_column=column)))
+    if column in encoding_config.iqr_masker:
+        steps.append(("iqr", IQRMasker(output_column=column)))
+    if column in encoding_config.scale:
+        steps.append(("scale", MinMaxScaler()))
+    if not steps:
+        raise ValueError(f"Column '{column}' is not in any encoding category.")
+    return Pipeline(steps)
 
-    for input_col, handlers in config.items():
-        for handler_cfg in handlers:
-            pipeline_type = handler_cfg.get("type", "simple")
-            transformer_cls = handler_cfg["transformer"]
-            column_name = handler_cfg["output_column"]
-            transformer_kwargs = handler_cfg.get("transformer_kwargs", {})
-            params_kwargs = handler_cfg.get("params", {})
 
-            if pipeline_type == "numerical":
-                pipeline = PipelineFactory.make_numerical_pipeline(
-                    extractor_cls=transformer_cls,
-                    column_name=column_name,
-                    **params_kwargs,
-                    **transformer_kwargs,
-                )
-            elif pipeline_type == "categorical":
-                pipeline = PipelineFactory.make_categorical_pipeline(
-                    extractor_cls=transformer_cls,
-                    column_name=column_name,
-                    **params_kwargs,
-                    **transformer_kwargs,
-                )
-            elif pipeline_type == "multi_label":
-                pipeline = PipelineFactory.make_multi_label_pipeline(
-                    normalizer_cls=transformer_cls,
-                    column_name=column_name,
-                    **params_kwargs,
-                    **transformer_kwargs,
-                )
-            elif pipeline_type == "simple":
-                pipeline = PipelineFactory.make_simple_pipeline(
-                    transformer_cls=transformer_cls,
-                    column_name=column_name,
-                    **params_kwargs,
-                    **transformer_kwargs,
-                )
-            else:
-                raise ValueError(f"Unknown pipeline type: {pipeline_type}")
+def _build_encoding_column_transformer(encoding_config: EncodingSpec) -> ColumnTransformer:
+    """Build ColumnTransformer for all columns defined in EncodingSpec.
 
-            transformers.append((f"{input_col}_{column_name}_pipe", pipeline, [input_col]))
+    Args:
+        encoding_config: EncodingSpec with column categories.
 
+    Returns:
+        ColumnTransformer with one pipeline per column.
+    """
+    encode_cols = set(
+        list(encoding_config.one_hot)
+        + list(encoding_config.label_encode)
+        + list(encoding_config.multi_label)
+        + list(encoding_config.iqr_masker)
+        + list(encoding_config.scale)
+    )
+
+    transformers_list = [
+        (f"encoding_{i}", _build_encoding_pipeline(column, encoding_config), [column])
+        for i, column in enumerate(sorted(encode_cols))
+    ]
     return ColumnTransformer(
-        transformers=transformers,
-        verbose_feature_names_out=verbose_feature_names_out,
+        transformers=transformers_list,
+        remainder="passthrough",
+        verbose_feature_names_out=False,
     )
 
 
-def preprocess_dataframe(df: pd.DataFrame, preprocessor: ColumnTransformer) -> pd.DataFrame:
-    """
-    Fit and transform a DataFrame using a ColumnTransformer, returning transformed output.
-
-    This function automatically fits the preprocessor on the input DataFrame
-    and returns the transformed result as DataFrame.
+def apply_transforming(df: pd.DataFrame, transform_config: list[TransformerSpec]) -> pd.DataFrame:
+    """Apply raw-to-structured transformation via ColumnTransformer.
 
     Args:
         df: Input DataFrame with raw features.
-        preprocessor: ColumnTransformer with pipelines for preprocessing.
+        transform_config: List of TransformerSpec defining transformations.
 
     Returns:
-        Transformed DataFrame with processed features.
+        DataFrame with structured columns only.
 
     Raises:
-        KeyError: If required input columns are missing from `df`.
+        KeyError: If required input columns are missing.
     """
-    # --- Verify that all required columns exist ---
-    required_columns = [col for _, _, cols in preprocessor.transformers for col in cols]
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
-        raise KeyError(f"Input DataFrame is missing required columns: {missing_columns}")
+    ct = _build_column_transformer(transform_config)
+    required = [col for _, _, cols in ct.transformers for col in cols]
+    missing = [col for col in required if col not in df.columns]
+    if missing:
+        raise KeyError(f"Input DataFrame is missing required columns: {missing}")
 
-    # --- Fit and transform ---
-    transformed_array = preprocessor.fit_transform(df)
-
-    feature_names = preprocessor.get_feature_names_out()
-    return pd.DataFrame(transformed_array, columns=feature_names, index=df.index)
+    transformed = ct.fit_transform(df)
+    feature_names = [str(name) for name in ct.get_feature_names_out()]
+    return pd.DataFrame(transformed, columns=feature_names, index=df.index)
 
 
-def split_x_y(
-    df: pd.DataFrame, config: dict[str, list[dict[str, Any]]]
-) -> tuple[pd.DataFrame, Union[pd.Series, pd.DataFrame]]:
+def apply_engineering(df: pd.DataFrame, engineering_config: list[TransformerSpec]) -> pd.DataFrame:
+    """Add derived columns via ColumnTransformer.
+
+    Args:
+        df: DataFrame with structured columns.
+        engineering_config: List of TransformerSpec for derived features.
+
+    Returns:
+        DataFrame with additional engineered columns.
+
+    Raises:
+        KeyError: If required input columns are missing.
     """
-    Split a fully preprocessed DataFrame into X and y.
+    ct = _build_column_transformer(engineering_config)
+    required = [col for _, _, cols in ct.transformers for col in cols]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise KeyError(f"Input DataFrame is missing required columns: {missing}")
 
-    The split is based on the `role` field in the transformer config:
-    handlers with role="y" define target columns, all others are treated
-    as features.
+    out = df.copy()
+    out_arr = ct.fit_transform(df)
+    feature_names = [str(name) for name in ct.get_feature_names_out()]
+
+    for j, col in enumerate(feature_names):
+        out[col] = out_arr[:, j] if out_arr.ndim > 1 else out_arr
+    return out
+
+
+def apply_encoding_features(df: pd.DataFrame, encoding_config: EncodingSpec) -> pd.DataFrame:
+    """Encode feature columns to numeric.
+
+    Columns not specified in `encoding_config` are passed through unchanged.
+    Columns in `encoding_config.drop` are excluded from the result.
+
+    Args:
+        df: DataFrame with cleaned features.
+        encoding_config: Spec for feature encoding.
+
+    Returns:
+        DataFrame with encoded features.
+
+    Raises:
+        KeyError: If columns specified in encoding_config are missing.
+        ValueError: If no feature columns remain after excluding drop columns.
+    """
+    ct = _build_encoding_column_transformer(encoding_config)
+    required = [col for _, _, cols in ct.transformers for col in cols]
+    missing = [col for col in required if col not in df.columns]
+    if missing:
+        raise KeyError(f"Input DataFrame is missing required columns: {missing}")
+
+    missing_drop = [col for col in encoding_config.drop if col not in df.columns]
+    if missing_drop:
+        raise ValueError(f"Drop columns {missing_drop} not found in DataFrame")
+
+    encoded = ct.fit_transform(df)
+    feature_names = [str(name) for name in ct.get_feature_names_out()]
+    df = pd.DataFrame(encoded, columns=feature_names, index=df.index)
+    return df.drop(columns=encoding_config.drop)
+
+
+def apply_encoding_target(
+    df: pd.DataFrame, target_spec: TargetSpec
+) -> tuple[pd.DataFrame, Optional[list[str]]]:
+    """Encode target column for regression or classification.
+
+    Args:
+        df: DataFrame containing the target column.
+        target_spec: TargetSpec with task type and encoding options.
+
+    Returns:
+        Tuple of (DataFrame with encoded target, class labels or None).
+        For regression: (DataFrame with IQR applied if specified, None).
+        For classification: (DataFrame with label encoding, sorted labels).
+
+    Raises:
+        ValueError: If target column is missing or task type is invalid.
+    """
+    if target_spec.column not in df.columns:
+        raise ValueError(f"Target column '{target_spec.column}' not found in DataFrame")
+
+    df_out = df.copy()
+    y = df[target_spec.column]
+
+    if target_spec.task == "regression":
+        # Apply IQR masker if specified
+        if target_spec.apply_iqr_masker:
+            masker = IQRMasker(output_column=target_spec.column)
+            y_masked = masker.fit_transform(y)
+            df_out[target_spec.column] = y_masked.iloc[:, 0]
+        return df_out, None
+
+    elif target_spec.task == "classification":
+        # Label encoding for classification
+        label_encoder = LabelEncoder()
+        encoded = label_encoder.fit_transform(y)
+        df_out[target_spec.column] = encoded
+
+        if target_spec.return_labels:
+            return df_out, list(label_encoder.classes_)
+        return df_out, None
+
+    else:
+        raise ValueError(f"Invalid task type: {target_spec.task}")
+
+
+def split_x_y(df: pd.DataFrame, target_column: str) -> tuple[pd.DataFrame, pd.Series]:
+    """Split a DataFrame into features X and target y.
 
     Args:
         df: Transformed and cleaned DataFrame.
-        config: Column transformer configuration with `role` and `output_column`.
+        target_column: Column name to use as target.
 
     Returns:
-        X: Feature DataFrame.
-        y: Target variable (Series for single target, DataFrame for multi-target).
+        Tuple of (feature DataFrame, target Series).
 
     Raises:
-        ValueError: If no target columns are defined or expected targets
-                    are missing from the DataFrame.
+        ValueError: If target column is missing from the DataFrame.
     """
+    if target_column not in df.columns:
+        raise ValueError(f"Target column '{target_column}' missing in DataFrame")
 
-    # --- Collect target column names from config ---
-    y_columns = [
-        handler["output_column"]
-        for handlers in config.values()
-        for handler in handlers
-        if handler.get("role") == "y"
-    ]
-
-    if not y_columns:
-        raise ValueError("No target columns defined (role='y').")
-
-    # --- Validate presence of target columns ---
-    missing = set(y_columns) - set(df.columns)
-    if missing:
-        raise ValueError(f"Target columns missing in DataFrame: {sorted(missing)}")
-
-    # --- Split ---
-    X = df.drop(columns=y_columns)
-    y = df[y_columns]
-
-    return (X, y) if y.shape[1] > 1 else (X, y.iloc[:, 0])
+    X = df.drop(columns=[target_column])
+    y = df[target_column]
+    return X, y
 
 
-def parse_data(filepath: str, config: dict[str, list[dict[str, Any]]]) -> pd.DataFrame:
-    """
-    Load, preprocess, and clean a dataset from CSV.
+def parse_data(
+    filepath: str,
+    transform_config: list[TransformerSpec],
+    engineering_config: list[TransformerSpec],
+    encoding_config: EncodingSpec,
+    target_spec: TargetSpec,
+) -> tuple[pd.DataFrame, Optional[list[str]]]:
+    """Load, preprocess, and encode a dataset from CSV.
 
     Pipeline:
         1. Load raw CSV.
-        2. Drop unnamed columns (e.g., index artifacts).
-        3. Clean raw data (drop duplicates, empty rows).
-        4. Apply feature preprocessing via ColumnTransformer.
-        5. Clean transformed features (drop NaNs, unknowns, constant columns, duplicates).
+        2. Clean raw data.
+        3. Apply transforming (raw -> structured columns).
+        4. Apply engineering (add derived columns).
+        5. Clean transformed features.
+        6. Encode features.
+        7. Clean after feature encoding.
+        8. Encode target.
+        9. Clean after target encoding.
+        10. Convert to float64.
 
     Args:
         filepath: Path to CSV file.
-        config: Configuration dictionary describing feature pipelines.
+        transform_config: List of TransformerSpec for column transformations.
+        engineering_config: List of TransformerSpec for derived features.
+        encoding_config: EncodingSpec for numeric encoding of features.
+        target_spec: TargetSpec for target column encoding.
 
     Returns:
-        Fully cleaned, transformed DataFrame ready for modeling.
+        Tuple of (processed DataFrame, class labels list or None).
     """
-    # --- Load dataset ---
+    # 1. Load raw CSV
     df = pd.read_csv(filepath, encoding="utf-8")
 
-    # --- Drop unnamed columns ---
-    df = df.loc[:, ~df.columns.str.startswith("Unnamed:")]
-
-    # --- Pre-clean: raw data ---
+    # 2. Clean raw data
     df = clean_raw_dataframe(df)
 
-    # --- Create ColumnTransformer with pipelines ---
-    preprocessor = create_column_transformer(config, verbose_feature_names_out=False)
+    # 3. Apply transforming (raw -> structured columns)
+    df = apply_transforming(df, transform_config)
 
-    # --- Preprocess DataFrame ---
-    transformed_df = preprocess_dataframe(df, preprocessor)
+    # 4. Apply engineering (add derived columns)
+    df = apply_engineering(df, engineering_config)
 
-    # --- Post-clean: features ---
-    final_df = clean_dataframe(transformed_df)
+    # 5. Clean transformed features
+    df = clean_dataframe(df)
 
-    return final_df
+    # 6. Encode features
+    df = apply_encoding_features(df, encoding_config)
 
+    # 7. Clean after feature encoding
+    df = clean_dataframe(df)
 
-def save_x_y(
-    X: pd.DataFrame,
-    y: Union[pd.Series, pd.DataFrame],
-    path: Union[str, Path],
-    prefix: str = "",
-) -> None:
-    """
-    Save feature matrix X and target y to .npy files.
+    # 8. Encode target
+    df, labels = apply_encoding_target(df, target_spec)
 
-    Files created:
-        {prefix}X_data.npy
-        {prefix}y_data.npy
-        {prefix}feature_names.npy
-        {prefix}target_names.npy
+    # 9. Clean after target encoding
+    df = clean_dataframe(df)
 
-    Args:
-        X: Feature DataFrame.
-        y: Target variable (Series or DataFrame).
-        path: Directory to save files.
-        prefix: Optional filename prefix.
-    """
-    path = Path(path)
-    path.mkdir(parents=True, exist_ok=True)
+    # 10. Convert to float64
+    df = df.astype(float)
 
-    np.save(path / f"{prefix}X_data.npy", X.to_numpy())
-    np.save(path / f"{prefix}feature_names.npy", X.columns.to_numpy())
-
-    np.save(path / f"{prefix}y_data.npy", y.to_numpy())
-    if isinstance(y, pd.Series):
-        np.save(path / f"{prefix}target_names.npy", np.array([y.name]))
-    else:
-        np.save(path / f"{prefix}target_names.npy", y.columns.to_numpy())
+    return df, labels

@@ -1,13 +1,18 @@
-"""Main training script for regression models.
+"""Unified training script for regression and classification models.
 
-This script trains multiple regression models on the preprocessed
-Head Hunter dataset and saves the best performing model.
+This script trains models on preprocessed Head Hunter dataset and saves results.
 
 Usage:
-    python train.py data/processed -o resources --models all
+    python train.py data/processed -o resources --task regression
+    python train.py data/processed -o resources --task classification
 
-Models:
+Regression models:
     - ridge: Ridge Regression (L2)
+    - random_forest: Random Forest
+    - gradient_boosting: Gradient Boosting
+
+Classification models:
+    - logistic: Logistic Regression
     - random_forest: Random Forest
     - gradient_boosting: Gradient Boosting
 """
@@ -17,108 +22,132 @@ import warnings
 from pathlib import Path
 
 from config.cli import create_train_parser
-from training.regressors.base import BaseRegressor
-from training.regressors.gradient_boosting import GradientBoostingRegressor
-from training.regressors.linear import LinearRegressor
-from training.regressors.random_forest import RandomForestRegressor
+from config.tuning import CLASSIFICATION_PARAM_GRIDS, REGRESSION_PARAM_GRIDS
+from training.classifiers import (
+    BaseClassifier,
+    GradientBoostingClassifier,
+    LogisticClassifier,
+    RandomForestClassifier,
+)
+from training.regressors import (
+    BaseRegressor,
+    GradientBoostingRegressor,
+    RandomForestRegressor,
+    RidgeRegressor,
+)
 from utils.loader import DataLoader
 from utils.logging import setup_logger
-from utils.metrics import RegressionMetrics, save_metrics, save_predictions
-from utils.training import train_model
-from utils.visualization import plot_predictions_vs_actual
+from utils.training import run_classification_training, run_regression_training
+from utils.visualization import plot_class_balance
 
-# --- Available models registry ---
-MODELS: dict[str, type[BaseRegressor]] = {
-    "ridge": LinearRegressor,
+# --- Model registries ---
+REGRESSION_MODELS: dict[str, type[BaseRegressor]] = {
+    "ridge": RidgeRegressor,
     "random_forest": RandomForestRegressor,
     "gradient_boosting": GradientBoostingRegressor,
 }
 
+CLASSIFICATION_MODELS: dict[str, type[BaseClassifier]] = {
+    "logistic": LogisticClassifier,
+    "random_forest": RandomForestClassifier,
+    "gradient_boosting": GradientBoostingClassifier,
+}
+
+
+def create_output_dirs(output_dir: Path) -> dict[str, Path]:
+    """Create output directories for models, predictions, metrics, and plots.
+
+    Args:
+        output_dir: Base output directory.
+
+    Returns:
+        Dict with 'models', 'predictions', 'metrics', 'plots' paths.
+    """
+    dirs = {
+        "models": output_dir / "models",
+        "predictions": output_dir / "predictions",
+        "metrics": output_dir / "metrics",
+        "plots": output_dir / "plots",
+    }
+    for dir_path in dirs.values():
+        dir_path.mkdir(parents=True, exist_ok=True)
+    return dirs
+
 
 def main() -> None:
-    """
-    Main training entry point.
+    """Main training entry point for regression and classification models.
 
-    This script trains multiple regression models on the preprocessed
-    Head Hunter dataset and saves the best performing model.
+    Trains regression or classification models based on --task argument.
 
-    Error codes:
+    Exit codes:
         0: Success
         -1: Unexpected error
         -2: Validation error (file not found, wrong format)
     """
     warnings.filterwarnings("ignore")
 
-    parser = create_train_parser(list(MODELS.keys()))
+    parser = create_train_parser()
     args = parser.parse_args()
 
     logger = setup_logger(logger_name="Train", log_level=args.log_level)
+
     try:
         # --- Load data ---
+        logger.info(f"Task: '{args.task}'.")
         logger.info(f"Loading data from '{args.data_dir}'...")
-        data_loader = DataLoader(args.data_dir, prefix=args.prefix, random_seed=args.seed)
-        data_loader.load()
-        logger.info(
-            f"Loaded {data_loader.n_samples} samples with {data_loader.n_features} features."
-        )
+        input_dir = Path(args.data_dir) / args.task
+        loader = DataLoader(input_dir, prefix=args.prefix, random_seed=args.seed)
+        loader.load()
+        logger.info(f"Loaded ({loader.n_samples}) samples, ({loader.n_features}) features.")
+        if loader.class_labels:
+            logger.info(f"Class labels: {loader.class_labels}.")
 
         # --- Split data ---
         logger.info("Splitting data into train/test...")
-        data = data_loader.split(train_ratio=args.train_ratio, test_ratio=args.test_ratio)
-        logger.info(f"Train shape: {data.X_train.shape}")
-        logger.info(f"Test shape: {data.X_test.shape}")
-
-        # --- Determine which models to train ---
-        models_to_train = list(MODELS.keys()) if "all" in args.models else args.models
+        data = loader.split(train_ratio=args.train_ratio, test_ratio=args.test_ratio)
+        logger.info(f"Train shape: {data.X_train.shape}.")
+        logger.info(f"Test shape: {data.X_test.shape}.")
 
         # --- Create output directories ---
-        output_dir = Path(args.output_dir)
-        models_dir = output_dir / "models"
-        models_dir.mkdir(parents=True, exist_ok=True)
-        predictions_dir = output_dir / "predictions"
-        predictions_dir.mkdir(parents=True, exist_ok=True)
-        metrics_dir = output_dir / "metrics"
-        metrics_dir.mkdir(parents=True, exist_ok=True)
-        plots_dir = output_dir / "plots"
-        plots_dir.mkdir(parents=True, exist_ok=True)
+        output_dir = Path(args.output_dir) / args.task
+        dirs = create_output_dirs(output_dir)
 
         # --- Train models ---
-        results: dict[str, tuple[BaseRegressor, dict[str, RegressionMetrics]]] = {}
-        for model_name in models_to_train:
-            logger.info(f"Training '{model_name}'...")
-
-            model_cls = MODELS[model_name]
-            model, metrics = train_model(
-                model_cls=model_cls,
-                X_train=data.X_train,
-                y_train=data.y_train,
-                X_test=data.X_test,
-                y_test=data.y_test,
+        if args.task == "regression":
+            run_regression_training(
+                data=data,
+                models_registry=REGRESSION_MODELS,
+                param_grids=REGRESSION_PARAM_GRIDS,
+                dirs=dirs,
                 random_seed=args.seed,
                 tune_hyperparams=not args.no_tune,
+                logger=logger,
             )
-            results[model_name] = (model, metrics)
+        else:
+            # --- Plot class balance for classification ---
+            if loader.class_labels:
+                plot_class_balance(
+                    data.y_train,
+                    loader.class_labels,
+                    title="Training Set Class Distribution",
+                    save_path=dirs["plots"] / "class_balance.png",
+                )
+                logger.info("Saved class balance plot.")
 
-            # --- Log metrics ---
-            logger.info(f"Model '{model_name}' results:")
-            logger.info(f"---> Train 'R^2': {metrics['train'].r2:.4f}")
-            logger.info(f"---> Test 'R^2': {metrics['test'].r2:.4f}")
-
-            # --- Save predictions, metrics, model and plot ---
-            y_pred_test = model.predict(data.X_test)
-            save_predictions(y_pred_test, predictions_dir, model_name)
-            save_metrics(metrics["test"], metrics_dir, model_name)
-            model.save_model(models_dir / f"{model_name}.pkl")
-            plot_predictions_vs_actual(
-                y_true=data.y_test,
-                y_pred=y_pred_test,
-                title=f"{model_name}: Predictions vs Actual",
-                save_path=plots_dir / f"{model_name}_predictions.png",
+            run_classification_training(
+                data=data,
+                models_registry=CLASSIFICATION_MODELS,
+                param_grids=CLASSIFICATION_PARAM_GRIDS,
+                dirs=dirs,
+                random_seed=args.seed,
+                tune_hyperparams=not args.no_tune,
+                class_labels=loader.class_labels,
+                logger=logger,
             )
 
-        logger.info("Training completed successfully!")
+        logger.info("Training completed successfully.")
 
-    except (FileNotFoundError, ValueError) as exc:
+    except (FileNotFoundError, ValueError, RuntimeError, KeyError, TypeError) as exc:
         logger.error(f"Error: {exc}.")
         sys.exit(-2)
     except Exception as exc:

@@ -1,6 +1,4 @@
-"""
-Categorical text transformers.
-"""
+"""Categorical text transformers."""
 
 import re
 
@@ -8,8 +6,7 @@ from parsers.base.core import BaseCategoricalTextExtractor
 
 
 class GenderExtractor(BaseCategoricalTextExtractor):
-    """
-    Transformer that extracts gender information from a column.
+    """Transformer that extracts gender information from a column.
 
     This transformer searches for gender-specific keywords in each text entry
     and returns a standardized label ('male' or 'female') based on pre-defined
@@ -23,8 +20,7 @@ class GenderExtractor(BaseCategoricalTextExtractor):
 
 
 class WorkPositionCategorizer(BaseCategoricalTextExtractor):
-    """
-    Transformer to extract the main work position category from a column.
+    """Transformer to extract the main work position category from a column.
 
     This transformer searches for job-related keywords in each text entry and
     maps them to a predefined set of standardized categories, such as 'programmer',
@@ -63,8 +59,7 @@ class WorkPositionCategorizer(BaseCategoricalTextExtractor):
 
 
 class CityCategorizer(BaseCategoricalTextExtractor):
-    """
-    Transformer to categorize cities from a column.
+    """Transformer to categorize cities from a column.
 
     This transformer analyzes each text entry and maps it to a broad city category
     based on predefined patterns.
@@ -84,8 +79,7 @@ class CityCategorizer(BaseCategoricalTextExtractor):
 
 
 class RelocationReadinessExtractor(BaseCategoricalTextExtractor):
-    """
-    Transformer to extract relocation readiness from a column.
+    """Transformer to extract relocation readiness from a column.
 
     This transformer analyzes each text entry to determine whether the person
     is willing, unwilling, or wants to relocate.
@@ -99,8 +93,7 @@ class RelocationReadinessExtractor(BaseCategoricalTextExtractor):
 
 
 class BusinessTripReadinessExtractor(BaseCategoricalTextExtractor):
-    """
-    Transformer to extract business trip readiness from a column.
+    """Transformer to extract business trip readiness from a column.
 
     This transformer analyzes each text entry to determine whether the person
     is willing, unwilling, or willing only to occasional business trips.
@@ -119,8 +112,7 @@ class BusinessTripReadinessExtractor(BaseCategoricalTextExtractor):
 
 
 class EducationLevelExtractor(BaseCategoricalTextExtractor):
-    """
-    Transformer to extract the highest education level from a column.
+    """Transformer to extract the highest education level from a column.
 
     Uses a hierarchy of education levels to return the first match:
         'higher' > 'special' > 'secondary' > 'incomplete'.
@@ -148,14 +140,13 @@ class EducationLevelExtractor(BaseCategoricalTextExtractor):
 
 
 class CarOwnershipExtractor(BaseCategoricalTextExtractor):
-    """
-    Transformer to determine whether a person owns a car from a column.
+    """Transformer to determine whether a person owns a car from a column.
 
     This transformer searches for keywords in each text entry that indicate
     car ownership and maps them to standardized categories ('yes', 'no').
     """
 
     PATTERNS: dict[str, re.Pattern] = {
-        "own": re.compile(r"имеет|есть|да|own|has", re.IGNORECASE),
-        "not_own": re.compile(r"нет|no|none|not own", re.IGNORECASE),
+        "yes": re.compile(r"имеет|есть|да|own|has", re.IGNORECASE),
+        "no": re.compile(r"нет|no|none|not own", re.IGNORECASE),
     }
