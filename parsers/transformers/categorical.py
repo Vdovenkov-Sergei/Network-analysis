@@ -86,8 +86,8 @@ class RelocationReadinessExtractor(BaseCategoricalTextExtractor):
     """
 
     PATTERNS: dict[str, re.Pattern] = {
-        "no": re.compile(r"не готов[а]? к переезду|not willing to relocate", re.IGNORECASE),
-        "yes": re.compile(r"готов[а]? к переезду|willing to relocate", re.IGNORECASE),
+        "no": re.compile(r"не готова? к переезду|not willing to relocate", re.IGNORECASE),
+        "yes": re.compile(r"готова? к переезду|willing to relocate", re.IGNORECASE),
         "want": re.compile(r"хочу переехать|want to relocate", re.IGNORECASE),
     }
 
@@ -101,11 +101,11 @@ class BusinessTripReadinessExtractor(BaseCategoricalTextExtractor):
 
     PATTERNS: dict[str, re.Pattern] = {
         "no": re.compile(
-            r"не готов[а]? к командировкам|not prepared for business trips", re.IGNORECASE
+            r"не готова? к командировкам|not prepared for business trips", re.IGNORECASE
         ),
-        "yes": re.compile(r"готов[а]? к командировкам|prepared for business trips", re.IGNORECASE),
+        "yes": re.compile(r"готова? к командировкам|prepared for business trips", re.IGNORECASE),
         "rarely": re.compile(
-            r"готов[а]? к редким командировкам|prepared for occasional business trips",
+            r"готова? к редким командировкам|prepared for occasional business trips",
             re.IGNORECASE,
         ),
     }

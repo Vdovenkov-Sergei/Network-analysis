@@ -17,18 +17,18 @@ class DataSplit:
     """Container for train/test data splits.
 
     Attributes:
-        X_train: Training features.
+        x_train: Training features.
         y_train: Training targets.
-        X_test: Test features.
+        x_test: Test features.
         y_test: Test targets.
         feature_columns: List of feature columns (optional).
         target_column: Name of target column (optional).
         class_labels: List of class labels (optional).
     """
 
-    X_train: np.ndarray
+    x_train: np.ndarray
     y_train: np.ndarray
-    X_test: np.ndarray
+    x_test: np.ndarray
     y_test: np.ndarray
     feature_columns: Optional[list[str]] = None
     target_column: Optional[str] = None
@@ -47,6 +47,8 @@ class DataLoader:
         random_seed: Random seed for reproducibility.
     """
 
+    _NOT_LOADED_MSG: str = "Data not loaded. Call load() first."
+
     def __init__(
         self,
         data_dir: Union[str, Path],
@@ -64,7 +66,7 @@ class DataLoader:
         self.prefix = prefix
         self.random_seed = random_seed
 
-        self._X: Optional[np.ndarray] = None
+        self._x: Optional[np.ndarray] = None
         self._y: Optional[np.ndarray] = None
         self._feature_columns: Optional[list[str]] = None
         self._target_column: Optional[str] = None
@@ -79,7 +81,7 @@ class DataLoader:
         Raises:
             FileNotFoundError: If any required file is missing.
         """
-        self._X = np.load(self.data_dir / f"{self.prefix}X_data.npy")
+        self._x = np.load(self.data_dir / f"{self.prefix}X_data.npy")
         self._y = np.load(self.data_dir / f"{self.prefix}y_data.npy")
 
         fc_path = self.data_dir / f"{self.prefix}feature_columns.npy"
@@ -99,17 +101,17 @@ class DataLoader:
         return self
 
     @property
-    def X(self) -> np.ndarray:
+    def x(self) -> np.ndarray:
         """Get feature matrix."""
-        if self._X is None:
-            raise RuntimeError("Data not loaded. Call load() first.")
-        return self._X
+        if self._x is None:
+            raise RuntimeError(self._NOT_LOADED_MSG)
+        return self._x
 
     @property
     def y(self) -> np.ndarray:
         """Get target vector."""
         if self._y is None:
-            raise RuntimeError("Data not loaded. Call load() first.")
+            raise RuntimeError(self._NOT_LOADED_MSG)
         return self._y
 
     @property
@@ -130,16 +132,16 @@ class DataLoader:
     @property
     def n_samples(self) -> int:
         """Get number of samples."""
-        if self._X is None:
-            raise RuntimeError("Data not loaded. Call load() first.")
-        return self.X.shape[0]
+        if self._x is None:
+            raise RuntimeError(self._NOT_LOADED_MSG)
+        return self.x.shape[0]
 
     @property
     def n_features(self) -> int:
         """Get number of features."""
-        if self._X is None:
-            raise RuntimeError("Data not loaded. Call load() first.")
-        return self.X.shape[1]
+        if self._x is None:
+            raise RuntimeError(self._NOT_LOADED_MSG)
+        return self.x.shape[1]
 
     def split(
         self,
@@ -162,8 +164,8 @@ class DataLoader:
             RuntimeError: If data is not loaded.
         """
         # --- Check if data is loaded ---
-        if self._X is None or self._y is None:
-            raise RuntimeError("Data not loaded. Call load() first.")
+        if self._x is None or self._y is None:
+            raise RuntimeError(self._NOT_LOADED_MSG)
 
         # --- Validate ratios ---
         total_ratio = train_ratio + test_ratio
@@ -189,9 +191,9 @@ class DataLoader:
         test_idx = indices[train_end:]
 
         return DataSplit(
-            X_train=self.X[train_idx],
+            x_train=self.x[train_idx],
             y_train=self.y[train_idx],
-            X_test=self.X[test_idx],
+            x_test=self.x[test_idx],
             y_test=self.y[test_idx],
             feature_columns=self.feature_columns,
             target_column=self.target_column,
