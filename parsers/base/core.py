@@ -381,7 +381,7 @@ class BaseTextListNormalizer(BaseRowWiseTransformerSingle):
             Tuple of normalized, unique categories. Non-string inputs return empty tuple.
         """
         if not isinstance(text, str):
-            return tuple()
+            return ()
 
         items = [part.strip() for part in text.split(self.DELIMITER)]
         seen, result = set(), []

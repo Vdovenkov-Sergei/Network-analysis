@@ -17,6 +17,9 @@ from parsers.transformers.numerical import (
     ExperienceInMonthsExtractor,
 )
 
+CITY_COL = "Город"
+AGE_SEX_COL = "Пол, возраст"
+
 COLUMN_TRANSFORM_CONFIG: list[TransformerSpec] = [
     TransformerSpec(
         transformer=CurrencyToRUBTransformer,
@@ -31,12 +34,12 @@ COLUMN_TRANSFORM_CONFIG: list[TransformerSpec] = [
     ),
     TransformerSpec(
         transformer=GenderExtractor,
-        input_columns=["Пол, возраст"],
+        input_columns=[AGE_SEX_COL],
         output_column="sex",
     ),
     TransformerSpec(
         transformer=AgeExtractor,
-        input_columns=["Пол, возраст"],
+        input_columns=[AGE_SEX_COL],
         output_column="age",
     ),
     TransformerSpec(
@@ -53,18 +56,18 @@ COLUMN_TRANSFORM_CONFIG: list[TransformerSpec] = [
     ),
     TransformerSpec(
         transformer=CityCategorizer,
-        input_columns=["Город"],
+        input_columns=[CITY_COL],
         output_column="city",
         params={"default_label": "small"},
     ),
     TransformerSpec(
         transformer=RelocationReadinessExtractor,
-        input_columns=["Город"],
+        input_columns=[CITY_COL],
         output_column="relocation_readiness",
     ),
     TransformerSpec(
         transformer=BusinessTripReadinessExtractor,
-        input_columns=["Город"],
+        input_columns=[CITY_COL],
         output_column="business_trip_readiness",
     ),
     TransformerSpec(

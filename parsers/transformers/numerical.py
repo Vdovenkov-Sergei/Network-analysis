@@ -233,7 +233,7 @@ class CurrencyToRUBTransformer(BaseRowWiseTransformerSingle):
             Canonical 3-letter currency code.
         """
         # --- Try 3-letter code at the end ---
-        match_obj = re.search(r"([A-Za-z]{3})$", value.strip(), flags=re.IGNORECASE)
+        match_obj = re.search(r"([A-Z]{3})$", value.strip(), flags=re.IGNORECASE)
         code = match_obj.group(1).upper() if match_obj else None
 
         # --- Try aliases if not found ---

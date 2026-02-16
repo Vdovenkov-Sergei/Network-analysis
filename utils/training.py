@@ -37,11 +37,11 @@ def train_regressor(
         random_seed=random_seed,
         tune_hyperparams=tune_hyperparams and bool(param_grid),
     )  # type: ignore
-    model.fit(data.X_train, data.y_train)
+    model.fit(data.x_train, data.y_train)
 
     metrics = {
-        "train": model.evaluate(data.X_train, data.y_train),
-        "test": model.evaluate(data.X_test, data.y_test),
+        "train": model.evaluate(data.x_train, data.y_train),
+        "test": model.evaluate(data.x_test, data.y_test),
     }
 
     return model, metrics
@@ -74,11 +74,11 @@ def train_classifier(
         random_seed=random_seed,
         tune_hyperparams=tune_hyperparams and bool(param_grid),
     )  # type: ignore
-    model.fit(data.X_train, data.y_train)
+    model.fit(data.x_train, data.y_train)
 
     metrics = {
-        "train": model.evaluate(data.X_train, data.y_train, class_labels=class_labels),
-        "test": model.evaluate(data.X_test, data.y_test, class_labels=class_labels),
+        "train": model.evaluate(data.x_train, data.y_train, class_labels=class_labels),
+        "test": model.evaluate(data.x_test, data.y_test, class_labels=class_labels),
     }
 
     return model, metrics
@@ -133,7 +133,7 @@ def run_regression_training(
             best_model_name = model_name
 
         # Save artifacts
-        y_pred = model.predict(data.X_test)
+        y_pred = model.predict(data.x_test)
         save_predictions(y_pred, dirs["predictions"], model_name)
         save_metrics(metrics["test"], dirs["metrics"], model_name)
         model.save_model(dirs["models"] / f"{model_name}.pkl")
@@ -200,7 +200,7 @@ def run_classification_training(
             best_model_name = model_name
 
         # Save artifacts
-        y_pred = model.predict(data.X_test)
+        y_pred = model.predict(data.x_test)
         save_predictions(y_pred, dirs["predictions"], f"{model_name}_clf")
         save_metrics(test_metrics, dirs["metrics"], f"{model_name}_clf")
         model.save_model(dirs["models"] / f"{model_name}_clf.pkl")

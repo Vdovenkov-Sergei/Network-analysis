@@ -66,7 +66,7 @@ def _build_encoding_pipeline(column: str, encoding_config: EncodingSpec) -> Pipe
         steps.append(("scale", MinMaxScaler()))
     if not steps:
         raise ValueError(f"Column '{column}' is not in any encoding category.")
-    return Pipeline(steps)
+    return Pipeline(steps, memory=None)
 
 
 def _build_encoding_column_transformer(encoding_config: EncodingSpec) -> ColumnTransformer:

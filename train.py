@@ -105,8 +105,8 @@ def main() -> None:
         # --- Split data ---
         logger.info("Splitting data into train/test...")
         data = loader.split(train_ratio=args.train_ratio, test_ratio=args.test_ratio)
-        logger.info(f"Train shape: {data.X_train.shape}.")
-        logger.info(f"Test shape: {data.X_test.shape}.")
+        logger.info(f"Train shape: {data.x_train.shape}.")
+        logger.info(f"Test shape: {data.x_test.shape}.")
 
         # --- Create output directories ---
         output_dir = Path(args.output_dir) / args.task
