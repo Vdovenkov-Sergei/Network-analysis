@@ -29,7 +29,7 @@ def create_preprocess_parser() -> argparse.ArgumentParser:
         "--output-dir",
         type=str,
         default="data",
-        help="Root output directory (default: data)",
+        help="Root output directory; artifacts saved under {output_dir}/processed/{task} (default: data)",
     )
 
     parser.add_argument(
@@ -94,8 +94,8 @@ def create_train_parser() -> argparse.ArgumentParser:
         "-o",
         "--output-dir",
         type=str,
-        default="resources",
-        help="Root output directory (default: resources)",
+        default="data",
+        help="Root output directory; artifacts saved under {output_dir}/training/{task} (default: data)",
     )
 
     parser.add_argument(

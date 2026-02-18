@@ -1,16 +1,16 @@
 [tool.poetry]
 name = "network-analysis"
-version = "0.2.0"
+version = "0.3.2"
 description = "Head Hunter resume analysis"
 authors = ["Vdovenkov Sergei <vdovenkov2000@gmail.com>"]
 readme = "README.md"
 packages = [
-    {include = "parsers"},
-    {include = "utils"},
-    {include = "config"},
-    {include = "training"},
+    {include = "parsers", from = "src"},
+    {include = "utils", from = "src"},
+    {include = "config", from = "src"},
+    {include = "training", from = "src"},
 ]
-include = ["preprocess.py", "train.py"]
+include = ["src/preprocess.py", "src/train.py"]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
@@ -28,8 +28,6 @@ mypy = "^1.5.0"
 ruff = "^0.1.0"
 isort = "^5.12.0"
 black = "^23.9.0"
-jupyter = "^1.0.0"
-ipykernel = "^6.25.0"
 pandas-stubs = "^2.1.0"
 types-requests = "^2.31.0"
 types-seaborn = "^0.13.2.20251221"
@@ -69,4 +67,4 @@ ignore_missing_imports = true
 line-length = 100
 target-version = "py310"
 select = ["E", "F", "I", "N", "W", "UP"]
-ignore = ["E501", "N803", "N806", "UP007"]
+ignore = ["E501", "N803", "N806", "UP007", "I001"]

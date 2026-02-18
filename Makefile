@@ -1,6 +1,6 @@
 # Run in Git Bash
 
-SRC_CODE_DIR = .
+SRC_CODE_DIR = src
 POETRY_CMD = poetry run
 
 .PHONY: format lint style clean

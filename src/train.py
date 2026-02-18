@@ -3,8 +3,8 @@
 This script trains models on preprocessed Head Hunter dataset and saves results.
 
 Usage:
-    python train.py data/processed -o resources --task regression
-    python train.py data/processed -o resources --task classification
+    python train.py data/processed -o data --task regression
+    python train.py data/processed -o data --task classification
 
 Regression models:
     - ridge: Ridge Regression (L2)
@@ -109,7 +109,7 @@ def main() -> None:
         logger.info(f"Test shape: {data.x_test.shape}.")
 
         # --- Create output directories ---
-        output_dir = Path(args.output_dir) / args.task
+        output_dir = Path(args.output_dir) / "training" / args.task
         dirs = create_output_dirs(output_dir)
 
         # --- Train models ---
