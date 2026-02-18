@@ -13,7 +13,7 @@ def clean_raw_dataframe(
     strip_strings: bool = True,
 ) -> pd.DataFrame:
     """
-    Clean raw (preprocessed) DataFrame before feature engineering.
+    Clean raw (preprocessed) data before feature engineering.
 
     This function performs lightweight, schema-agnostic cleaning
     that should be applied BEFORE any sklearn transformers.
@@ -24,14 +24,14 @@ def clean_raw_dataframe(
         - Optionally strip whitespace from string columns.
 
     Args:
-        df: Raw input DataFrame.
+        df: Raw input.
         drop_duplicates: Whether to drop fully duplicated rows.
         drop_empty_rows: Whether to drop rows where all values are NaN.
         strip_strings: Whether to strip leading/trailing whitespace
                        from object (string) columns.
 
     Returns:
-        Cleaned raw DataFrame.
+        Cleaned raw data.
     """
     df_clean = df.copy()
 
@@ -61,7 +61,7 @@ def clean_dataframe(
     drop_duplicates: bool = True,
 ) -> pd.DataFrame:
     """
-    Clean a transformed (feature-engineered) DataFrame.
+    Clean transformed (feature-engineered) data.
 
     Cleaning steps:
         - Drop rows containing any NaN values.
@@ -70,13 +70,13 @@ def clean_dataframe(
         - Optionally drop columns with constant values.
 
     Args:
-        df: Transformed DataFrame with engineered features.
+        df: Transformed data with engineered features.
         remove_all_na_columns: Whether to drop columns fully filled with NaN.
         remove_constant_columns: Whether to drop columns with a single unique value.
         drop_duplicates: Whether to drop duplicated rows.
 
     Returns:
-        Cleaned DataFrame.
+        Cleaned data.
     """
     df_clean = df.copy()
 

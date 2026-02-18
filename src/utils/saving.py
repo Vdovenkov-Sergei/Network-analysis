@@ -14,7 +14,7 @@ def save_predictions(y_pred: np.ndarray, save_path: Union[str, Path], model_name
     """Save predictions to a NumPy file.
 
     Args:
-        y_pred: Predicted values array.
+        y_pred: Predicted values.
         save_path: Directory to save the predictions.
         model_name: Name of the model (used in filename).
     """
@@ -31,7 +31,7 @@ def save_metrics(
     """Save metrics to a JSON file.
 
     Args:
-        metrics: Metrics object with to_dict() method.
+        metrics: Metrics instance with to_dict() method.
         save_path: Directory to save the metrics.
         model_name: Name of the model (used in filename).
         suffix: Filename suffix.
@@ -45,14 +45,14 @@ def save_metrics(
 
 
 def save_dataset(X: pd.DataFrame, y: pd.Series, path: Union[str, Path], prefix: str = "") -> None:
-    """Save feature matrix X and target y to .npy files.
+    """Save feature matrix and target to .npy files.
 
     Creates: {prefix}X_data.npy, {prefix}y_data.npy, {prefix}feature_columns.npy,
     {prefix}target_column.npy.
 
     Args:
-        X: Feature DataFrame.
-        y: Target Series.
+        X: Feature matrix.
+        y: Target variable.
         path: Directory to save files.
         prefix: Optional filename prefix.
     """

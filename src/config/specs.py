@@ -11,9 +11,8 @@ class TransformerSpec:
     """Specification for one transformation step.
 
     Attributes:
-        transformer: Transformer class to apply.
-        input_columns: Ordered list of column names to extract from DataFrame and
-                    pass to transformer.
+        transformer: Applied to the selected columns.
+        input_columns: Ordered list of column names to extract and pass to the transformer.
         output_column: Name of the generated column. If None, derived from input.
         params: Optional keyword arguments for the transformer constructor.
     """
